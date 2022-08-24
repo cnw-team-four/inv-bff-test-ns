@@ -1,30 +1,58 @@
-import {Application} from 'express';
+import { Application } from 'express';
 import request from 'supertest';
+import { Container } from 'typescript-ioc';
 
-import {buildApiServer} from '../helper';
+import { buildApiServer } from '../helper';
+import Mock = jest.Mock;
+import { StockItemsMockService } from '../../src/services';
 
 describe('stock-item.controller', () => {
 
-  let app: Application;
-  beforeEach(async () => {
-    const apiServer = buildApiServer();
+    let app: Application;
+    let service_listStockItems: Mock;
 
-    app = await apiServer.getApp();
-  });
+    beforeEach(async () => {
+        service_listStockItems = jest.fn();
+        Container.bind(StockItemsMockService).factory(
+            () => ({
+                listStockItems: service_listStockItems
+            }),
+        );
 
-  test('canary verifies test infrastructure', () => {
-    expect(true).toEqual(true);
-  });
+        const apiServer = buildApiServer();
 
-  describe('given GET /stock-items', () => {
-    describe('when service is successful', () => {
-      test('then return 200 status', async () => {
-        return request(app).get('/stock-items').expect(200);
-      });
-
-      test('then should return an empty array', async () => {
-        return request(app).get('/stock-items').expect([]);
-      });
+        app = await apiServer.getApp();
     });
-  });
+
+
+    test('canary verifies test infrastructure', () => {
+        expect(true).toEqual(true);
+    });
+
+    describe('given GET /stock-items', () => {
+        describe('when service is successful', () => {
+            const expectedResult = [{ value: 'val' }];
+            beforeEach(() => {
+                service_listStockItems.mockResolvedValue(expectedResult);
+            });
+
+            test('then return 200 status', async () => {
+                return request(app).get('/stock-items').expect(200);
+            });
+
+            test('then should return value from service', async () => {
+                return request(app).get('/stock-items').expect(expectedResult);
+            });
+        });
+
+        describe('when service fails', () => {
+            beforeEach(() => {
+                service_listStockItems.mockRejectedValue(new Error('service failed'));
+            });
+
+            test('then return 502 error', async () => {
+                return request(app).get('/stock-items').expect(502);
+            });
+        });
+    });
 });
