@@ -52,3 +52,5 @@ base:
     - secretRef:
         name: jaeger-access
         optional: true
+
+connectsTo: inv-svc-test-ns
